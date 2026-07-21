@@ -1,15 +1,77 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-    <title>Test</title>
+    <meta charset="UTF-8">
+    <title>Lock API Test</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #111;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: sans-serif;
+            overflow: hidden;
+        }
+        #box {
+            padding: 20px 40px;
+            background-color: #e74c3c;
+            color: #fff;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+    </style>
 </head>
 <body>
+
+    <div id="box">ここをクリックしてロック開始</div>
+
     <script>
-        let i = 0;
-        while (true) {
-            i = i + 1;
-            alert(i);
-        }
+        const box = document.getElementById('box');
+
+        box.addEventListener('click', async () => {
+            try {
+                // 1. 画面をフルスクリーンにする
+                await document.documentElement.requestFullscreen();
+
+                // 2. マウスカーソルをロックする
+                await document.body.requestPointerLock();
+
+                // 3. キーボードロック（EscやF11などの特殊キーを捕捉・無効化）を試みる
+                // ※ブラウザのセキュリティ制限により、フルスクリーン中のみ動作します
+                if (navigator.keyboard && navigator.keyboard.lock) {
+                    // 全画面を勝手に抜けられないように主要なキーをロック対象に指定
+                    await navigator.keyboard.lock(['Escape', 'KeyW', 'KeyA', 'KeyS', 'KeyD']);
+                    console.log("Keyboard locked.");
+                }
+            } catch (err) {
+                console.error("ロックに失敗しました:", err);
+            }
+        });
+
+        // マウスの動きを監視するサンプル
+        document.addEventListener('mousemove', (e) => {
+            // ポインターロック中はクライアント座標ではなく移動量(movement)が取れる
+            // console.log(`X移動量: ${e.movementX}, Y移動量: ${e.movementY}`);
+        });
+
+        // ロックが解除されたときの処理
+        document.addEventListener('pointerlockchange', () => {
+            if (document.pointerLockElement !== document.body) {
+                console.log("Pointer unlocked.");
+                // キーボードロックも解除する
+                if (navigator.keyboard && navigator.keyboard.unlock) {
+                    navigator.keyboard.unlock();
+                }
+            }
+        });
     </script>
+
 </body>
 </html>
